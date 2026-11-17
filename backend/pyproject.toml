@@ -86,7 +86,7 @@ url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 line-length = 200
 indent-width = 4
 preview = false
-fix = true
+fix = false  # `ruff check` 只检查不改文件；需要自动修复时显式 `--fix`
 show-fixes = true
 exclude = [
     ".bzr",
@@ -144,6 +144,23 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/conftest.py" = ["E402"]  # 先设置 TESTING/SQLite 环境再 import 应用
+# 测试代码偏好紧凑写法；保留 F821 未定义名等真实缺陷检查
+"tests/**" = [
+    "B017",  # pytest.raises(Exception)
+    "C408",  # 不必要的 list()/dict() 调用
+    "E401",  # 一行多个 import
+    "E402",  # import 不在文件顶部（测试常先改环境再导入）
+    "E701",  # 一行多条语句（冒号）
+    "E702",  # 一行多条语句（分号）
+    "E731",  # lambda 赋值
+    "FAST002",  # FastAPI 依赖未使用 Annotated
+    "F401",  # 未使用 import（部分测试依赖导入副作用）
+    "F811",  # 重复定义（fixture/参数化常见）
+    "F841",  # 未使用变量
+    "I001",  # import 排序
+    "UP017",  # datetime.UTC 别名
+    "UP035",  # 弃用的 typing 导入
+]
 
 [tool.ruff.format]
 docstring-code-format = true
