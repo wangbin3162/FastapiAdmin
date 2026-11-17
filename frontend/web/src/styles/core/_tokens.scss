@@ -1,0 +1,58 @@
+// ============================================================
+// 基础语义 Token
+// 品牌色、圆角、间距、字号、阴影的唯一来源是 design/tokens.json
+// （构建后生成 _brand-tokens.generated.scss）；这里只保留生成文件未覆盖的
+// 表面、文字层级、图标、终端与空状态语义，避免同名 token 双写后互相覆盖。
+// 规则：views 与 components 不再写十六进制颜色，统一引用这里或 EP 变量。
+// ============================================================
+:root {
+  color-scheme: light;
+
+  /* 表面与边框 */
+  --fa-surface: #fff;
+  --fa-surface-2: #fafbfc;
+  --fa-border: #e6e8ec;
+  --fa-border-subtle: #eef0f3;
+
+  /* 文字层级（AA：正文 ≥4.5:1） */
+  --fa-text-1: #111827;
+  --fa-text-2: #4b5563;
+  --fa-text-3: #6b7280;
+
+  /* 图标 / 等宽字体 */
+  --fa-font-mono: "SFMono-Regular", menlo, consolas, "Liberation Mono", monospace;
+  --fa-icon-sm: 14px;
+  --fa-icon-md: 16px;
+  --fa-icon-lg: 20px;
+  --fa-icon-empty: 60px;
+
+  /* 终端（浅色不再纯黑） */
+  --fa-terminal-bg: #f5f6f8;
+  --fa-terminal-fg: #303133;
+
+  /* 空状态 */
+  --fa-empty-size: 60px;
+}
+
+html.dark {
+  color-scheme: dark;
+
+  /* 生成文件已覆盖 surface/border/text/shadow，这里只补终端与细分隔线语义 */
+  --fa-border-subtle: #20242c;
+  --fa-terminal-bg: #0b0d10;
+  --fa-terminal-fg: #d4d4d4;
+}
+
+/* 工具类 */
+.fa-tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+.fa-mono {
+  font-family: var(--fa-font-mono);
+}
+
+.fa-hint {
+  font-size: var(--fa-font-sm);
+  color: var(--fa-text-3);
+}
