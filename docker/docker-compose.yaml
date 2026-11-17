@@ -15,6 +15,8 @@ services:
     platform: linux/amd64
     environment:
       TZ: "Asia/Shanghai"
+      # 数据目录放到挂载点的子目录：挂载点里有 .gitkeep，initdb 不接受非空目录
+      PGDATA: /var/lib/postgresql/data/pgdata
       POSTGRES_DB: "${POSTGRES_DB:-fastapiadmin}"
       POSTGRES_USER: "${POSTGRES_USER:-postgres}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?错误: 请设置 POSTGRES_PASSWORD 环境变量}"
