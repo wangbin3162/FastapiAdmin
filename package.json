@@ -1,0 +1,35 @@
+{
+  "name": "fastapiadmin",
+  "version": "3.1.0",
+  "private": true,
+  "description": "FastapiAdmin 常用命令入口：后端 uv、前端 pnpm、Docker 依赖",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "setup": "cd backend && uv run main.py setup",
+    "deps": "pnpm run deps:backend && pnpm run deps:web && pnpm run deps:app && pnpm run deps:docs",
+    "deps:backend": "cd backend && uv sync --extra postgres",
+    "deps:web": "pnpm -C frontend/web install",
+    "deps:app": "pnpm -C frontend/app install",
+    "deps:docs": "pnpm -C frontend/docs install",
+    "dev:backend": "cd backend && uv run main.py run --env=dev",
+    "dev:web": "pnpm -C frontend/web dev",
+    "dev:app": "pnpm -C frontend/app dev:h5",
+    "dev:docs": "pnpm -C frontend/docs dev",
+    "build:web": "pnpm -C frontend/web build:prod",
+    "build:app": "pnpm -C frontend/app build:h5",
+    "build:docs": "pnpm -C frontend/docs build",
+    "preview:web": "pnpm -C frontend/web preview",
+    "preview:docs": "pnpm -C frontend/docs preview",
+    "typecheck:web": "pnpm -C frontend/web ts:check",
+    "lint:backend": "cd backend && uv run ruff check",
+    "lint:web": "pnpm -C frontend/web lint",
+    "test:backend": "cd backend && uv run pytest -q",
+    "test:web": "pnpm -C frontend/web test",
+    "docker:up": "cd docker && docker compose --env-file .env up -d postgres redis",
+    "docker:down": "cd docker && docker compose --env-file .env down",
+    "docker:ps": "cd docker && docker compose --env-file .env ps"
+  }
+}
