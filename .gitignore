@@ -14,6 +14,8 @@ __pycache__
 *.egg-info
 dist
 build
+# 例外：vite 配置插件的源码目录，不是构建产物
+!frontend/web/build/
 eggs
 .eggs
 *.manifest
