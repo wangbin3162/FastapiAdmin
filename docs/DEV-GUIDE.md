@@ -162,6 +162,8 @@ grep -oE '.{0,60}readyState.{0,60}' <chunk> | grep -i websocket       # 核守�
 ## 2. 首次启动要点
 
 - 复制 `backend/env/.env.example` 为 `.env.dev`，必改项：`DATABASE_PASSWORD` / `REDIS_PASSWORD` / `OPENAI_API_KEY`；`DATABASE_TYPE` 默认 postgres，也支持 mysql / sqlite（本地体验用 sqlite 可零配置）。
+- 也可用配置向导代替手改 env：`cd backend && uv run main.py setup`（默认 `http://127.0.0.1:9090`），保存后回写后端 / Docker / Web / 小程序 env；向导只测试连接，不建库、不迁移。
+- 本机开发只想用容器跑依赖：`cd docker && docker compose --env-file .env up -d postgres redis`；用 SQLite 或外部库时只起 `redis`。`docker/.env` 不存在时先从 `.env.example` 复制并填口令。
 - 启动时自动执行迁移并导入 `sql/*.json` 种子数据，无需手动建表；dev 环境检测到模型变更还会自动生成并应用迁移。
 - 默认账号 `super` / `admin` / `user`，密码均为 `123456`，部署后立即修改。
 - 地址：Web `http://localhost:{VITE_PORT}`（`frontend/web/.env` 为 5180）；后端 `http://localhost:8001`，Swagger `/docs`，API 前缀 `/api/v1`。

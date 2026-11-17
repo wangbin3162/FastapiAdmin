@@ -37,11 +37,12 @@ FastapiAdmin/
 ```bash
 cd backend
 cp env/.env.example env/.env.dev       # 修改 DATABASE_PASSWORD / REDIS_PASSWORD / SECRET_KEY 等
-uv sync
+uv sync --extra postgres               # 数据库驱动，按 DATABASE_TYPE 选，见下
 uv run main.py run --env=dev           # 首次启动自动迁移并导入种子数据
 ```
 
-> 如果使用 postgres（默认库），需手动安装驱动：`uv sync --extra postgres`（MySQL 用 `--extra mysql`，全部驱动用 `--extra all-db`）。
+> 数据库驱动不随基础依赖安装，按 `DATABASE_TYPE` 选 extra：PostgreSQL `--extra postgres`（默认，含 `psycopg` + `asyncpg`）、MySQL `--extra mysql`、SQLite `--extra sqlite`、全部 `--extra all-db`。
+> ⚠️ 不带 extra 的 `uv sync` 会把已装的驱动移除，之后启动会报 `No module named 'psycopg'` / `'asyncpg'`；固定用带 extra 的命令。
 
 默认 `DATABASE_TYPE=postgres`（`localhost:5432`，库 `fastapiadmin` 需事先创建）。服务地址 `http://localhost:8001`，接口文档 `/docs`。
 
@@ -51,6 +52,31 @@ uv run main.py upgrade --env=dev       # 应用迁移
 uv run pytest -q                       # 测试
 uv run ruff check                      # 代码检查
 ```
+
+#### 配置向导（可选）
+
+不想逐个文件手改 env，可以启动初始化向导：浏览器里填一次，保存后回写 `backend/env/.env.{dev,prod}`、`docker/.env`、`frontend/web/.env*` 和 `frontend/app/.env.*.local`。
+
+```bash
+cd backend
+uv run main.py setup                   # 打开 http://127.0.0.1:9090
+```
+
+```bash
+uv run main.py setup --port 9091 --host 127.0.0.1   # 端口被占用时
+```
+
+向导可以测试数据库 / Redis 连接，但不建库、不迁移；保存后用 `uv run main.py run --env=dev` 启动，首次启动仍会自动迁移并导入种子数据。
+
+#### 本机开发：只在 Docker 里起依赖
+
+后端跑在本机，Postgres 和 Redis 用容器。`docker/.env` 不存在时先 `cp .env.example .env` 并填 `POSTGRES_PASSWORD` / `REDIS_PASSWORD`；用过向导则已生成，且与 `backend/env/.env.dev` 口令一致。
+
+```bash
+cd docker && docker compose --env-file .env up -d postgres redis
+```
+
+用 SQLite 或外部数据库时只起 Redis：`cd docker && docker compose up -d redis`。等容器健康（`docker compose ps`）后再启动后端；否则后端启动时会因连不上数据库或 Redis 直接退出。
 
 ### 前端
 
@@ -74,38 +100,35 @@ docker build --build-arg DB=postgres -f docker/backend/Dockerfile -t fastapiadmi
 
 ## 🔁 基于本工程新建项目：改名清单
 
-以「系统名改为 `Eco`、数据库改为 `eco`」为例。按层列出，**必改**是不改就跑不起来或会串环境，**建议**是品牌与文案。
+配置类改动（数据库名、口令、密钥、域名、端口、前端 API 地址等）用 `uv run main.py setup` 一次完成，会同步写后端、Docker、Web、小程序 env。下表只列向导改不到的部分。
 
 **必改**
 
 | 位置 | 改什么 |
 | --- | --- |
-| `backend/env/.env.dev`、`.env.prod`（由 `.env.example` 复制） | `DATABASE_NAME=eco`、数据库/Redis 口令、`SECRET_KEY`、`DATA_ENCRYPTION_KEY`（均用 `openssl rand -hex 32`）；生产再改 `PROD_CORS_ORIGINS`、`ALLOWED_HOSTS`、`OAUTH_ALLOWED_HOSTS` 为你的域名 |
-| `docker/.env`（由 `.env.example` 复制） | `POSTGRES_DB=eco`、`POSTGRES_PASSWORD`、`REDIS_PASSWORD`、`SECRET_KEY`、`DATA_ENCRYPTION_KEY`、`PROJECT_NAME`、`PROD_CORS_ORIGINS`、`OAUTH_ALLOWED_HOSTS` |
-| `docker/docker-compose.yaml` | 三处默认值 `:-fastapiadmin`（`POSTGRES_DB`、健康检查、`DATABASE_NAME`）和 `OAUTH_ALLOWED_HOSTS` 默认域名；`.env` 已设置时可不改，但建议一并改，避免回落到旧名 |
-| `backend/app/config/setting.py` | 默认值：`TITLE`、`DATABASE_NAME`、`ALLOWED_HOSTS`、`OAUTH_ALLOWED_HOSTS`（只是兜底，真实值以 `.env` 为准） |
-| `backend/sql/sys_param.json`、`sys_user.json` | 种子数据里的 logo / favicon / 版权 / 文档 / 头像 URL（指向 `service.fastapiadmin.com`）。**首次启动导入后才生效**，已初始化的库要到后台「参数管理」里改 |
-| `docker/nginx/nginx.conf`、`docker/nginx/ssl/` | `server_name` 与证书（仅用到 Nginx 部署时） |
-| `deploy.sh` | `REMOTE_ROOT`、`BACKUP_DIR` 默认路径（`/home/FastapiAdmin`）和验证用的域名 |
+| `docker/docker-compose.yaml` | 兜底默认值 `:-fastapiadmin`（`POSTGRES_DB`、健康检查、`DATABASE_NAME`）和 `OAUTH_ALLOWED_HOSTS` 默认域名。`docker/.env` 由向导写入，这些默认值只防漏配时回落到旧名 |
+| `backend/app/config/setting.py` | 代码兜底默认值 `TITLE`、`DATABASE_NAME`、`ALLOWED_HOSTS`、`OAUTH_ALLOWED_HOSTS`（真实值以 `.env` 为准） |
+| `backend/sql/sys_param.json`、`sys_user.json` | 种子数据里的 logo / favicon / 版权 / 文档 / 头像 URL（指向 `service.fastapiadmin.com`）。**首次启动导入后才生效**；已初始化的库到后台「参数管理」改 |
+| `docker/nginx/nginx.conf`、`docker/nginx/ssl/` | `server_name` 与证书（仅 Nginx 部署时） |
+| `deploy.sh` | `FA_REMOTE_ROOT` / `FA_BACKUP_DIR` 默认路径（`/home/FastapiAdmin`）和验证用的域名 |
 
-**建议（品牌与文案）**
+**品牌与资源**
 
 | 位置 | 改什么 |
 | --- | --- |
-| `frontend/web/.env.development`、`.env.production` | `VITE_APP_TITLE` |
+| `frontend/web/public/`、`frontend/web/src/assets/fa_imgs/`、`backend/static/image/` | `logo.svg`、`favicon.ico`、背景图等图标 |
 | `frontend/web/src/config/index.ts` | `name`（系统名称） |
 | `frontend/web/package.json` | `name`、`author`、`repository`、`bugs`、`homepage` |
-| `frontend/web/public/`、`frontend/web/src/assets/fa_imgs/`、`backend/static/image/` | `logo.svg`、favicon 等图标 |
-| `frontend/app/.env.*`、`pages.config.ts`、`src/locales/langs/{zh,en}.json` | `VITE_APP_TITLE`、`VITE_API_BASE_URL`、导航栏标题、分享与欢迎文案 |
+| `frontend/app/pages.config.ts`、`src/locales/langs/{zh,en}.json` | 导航栏标题、分享与欢迎文案（env 里的标题和接口地址由向导写入） |
 | `backend/pyproject.toml`、`app/core/logger.py`、`app/utils/console.py`、`main.py` | 项目描述、日志文件名 `fastapiadmin.log`、启动标题、CLI 说明 |
 | `README.md`、`docs/DESIGN-SPEC.md`、`docs/brand/`、`design/` | 项目名、品牌规范与资源 |
 
 **注意**
 
-- 数据库名只在**首次初始化**时生效：`docker/postgres/data/pgdata` 已存在时，改 `POSTGRES_DB` 不会重建库。要么删掉 `pgdata` 重新初始化（会清空数据），要么手动 `createdb eco`。
+- 数据库名只在**首次初始化**时生效：`docker/postgres/data/pgdata` 已存在时，向导改 `POSTGRES_DB` 不会重建库。要么删掉 `pgdata` 重新初始化（会清空数据），要么手动建库。
 - Docker 容器名固定为 `postgres`、`redis`、`backend`、`nginx`，同一台机器上跑两个项目会冲突，需要改 `docker-compose.yaml` 里的 `container_name` 和端口。
 - 全局检索遗漏项：`grep -rniE "fastapiadmin" --exclude-dir=node_modules --exclude-dir=.git .`。其中大量是代码注释里的 `@author`，不影响运行，可按需保留。
-- `.env`、`.env.dev`、`.env.prod` 不提交到 git。
+- 向导写入的 `backend/env/.env.*`、`docker/.env`、`frontend/web/.env*` 均已被 git 忽略；小程序配置写到 `frontend/app/.env.*.local`（`*.local` 已忽略），`frontend/app/.env.*` 本身仍保留仓库默认值。
 
 ## 📖 文档
 
