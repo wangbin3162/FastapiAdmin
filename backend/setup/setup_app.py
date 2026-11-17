@@ -360,9 +360,21 @@ def save_config(config: SetupConfig) -> dict:
         notes.append("生产环境未填写域名，已跳过前端生产 env 的写入")
 
     if web_mode_updates:
+        web_common_path = writer.WEB_DIR / ".env"
+        web_common_updates: dict[str, object] = {
+            "VITE_APP_TITLE": title,
+            "VITE_PORT": config.frontend.web_port,
+        }
+        if not web_common_path.is_file():
+            # 该文件已入库；缺失说明被删掉或工作区不完整，至少要保证代理前缀存在
+            web_common_updates["VITE_APP_BASE_API"] = "/api/v1"
+            notes.append(
+                "frontend/web/.env 不存在：已写入基础键，其余通用配置请执行 "
+                "git checkout -- frontend/web/.env 恢复"
+            )
         web_common_file = writer.write_env(
-            writer.WEB_DIR / ".env",
-            {"VITE_APP_TITLE": title, "VITE_PORT": config.frontend.web_port},
+            web_common_path,
+            web_common_updates,
             header="# 【通用】环境变量 - 所有环境共享\n",
         )
         written.append(_relative(web_common_file))
@@ -439,8 +451,9 @@ async def test_database(config: DatabaseConfig) -> dict:
     except ImportError as exc:  # pragma: no cover - 依赖缺失时给出明确指引
         return {"success": False, "msg": f"SQLAlchemy 异步引擎不可用：{exc}"}
 
-    engine = create_async_engine(url, pool_pre_ping=True)
+    engine = None
     try:
+        engine = create_async_engine(url, pool_pre_ping=True)
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
     except ModuleNotFoundError:
@@ -460,7 +473,8 @@ async def test_database(config: DatabaseConfig) -> dict:
             "detail": str(exc),
         }
     finally:
-        await engine.dispose()
+        if engine is not None:
+            await engine.dispose()
 
     return {"success": True, "msg": "数据库连接成功"}
 
