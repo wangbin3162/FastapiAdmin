@@ -69,6 +69,28 @@ def revision(
 
 
 @fastapiadmin_cli.command(
+    name="setup",
+    help="启动系统初始化配置向导（浏览器填写后回写 env 配置）, 运行 uv run main.py setup",
+)
+def setup(
+    host: Annotated[str, typer.Option("--host", help="监听地址，默认仅本机可访问")] = "127.0.0.1",
+    port: Annotated[int, typer.Option("--port", help="向导监听端口")] = 9090,
+) -> None:
+    """启动初始化向导，按表单回写后端 / Docker / Web / 小程序 env 文件。
+
+    参数:
+    - host (str): 监听地址，默认 127.0.0.1（页面会显示口令，勿随意暴露）。
+    - port (int): 向导端口，默认 9090。
+
+    返回:
+    - None
+    """
+    from setup.setup_app import run_setup_server
+
+    run_setup_server(host=host, port=port)
+
+
+@fastapiadmin_cli.command(
     name="upgrade",
     help="应用最新的 Alembic 迁移, 运行 python(或uv run) main.py upgrade --env=dev",
 )
