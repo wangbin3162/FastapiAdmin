@@ -8,15 +8,15 @@ Create Date: 2026-11-03 09:00:00
 ``(user_id, notice_id)`` 唯一，重复标记幂等；公告/用户删除时级联清理。
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
 revision: str = "a1b2c3d4e5f6"
-down_revision: Union[str, None] = "e082c18b2f01"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "e082c18b2f01"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
