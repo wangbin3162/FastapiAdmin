@@ -50,6 +50,7 @@ async def test_auto_register(monkeypatch: pytest.MonkeyPatch) -> None:
         await mod.auto_register_login_user(db=object(), username="user_1", display_name="N", fail_msg="注册失败")
 
 
+@pytest.mark.real_login_log
 async def test_write_login_log_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     import app.modules.system.auth.service as mod
     class C:

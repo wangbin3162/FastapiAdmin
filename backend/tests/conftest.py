@@ -211,6 +211,37 @@ async def _test_lifespan(app) -> AsyncGenerator[Any, None]:
 
 from app import create_app
 
+
+async def _skip_operation_log(_log_data) -> None:
+    """操作日志由 BackgroundTask 另开事务写库；临时 SQLite 下它和请求事务抢写锁，
+    TestClient 会等到后台任务结束，每个写请求平白多等约 31 秒。"""
+
+
+patch("app.core.router_class._write_operation_log_async", new=_skip_operation_log).start()
+
+import app.modules.system.auth.service as _auth_service  # noqa: E402
+
+_real_write_login_log = _auth_service._write_login_log
+
+
+async def _skip_login_log(*_args, **_kwargs) -> None:
+    """登录日志在请求事务持写锁时另开事务写库，临时 SQLite 下要白等满 busy_timeout（30 秒）后才失败，
+    每次登录平白多等约 31 秒，且日志实际写不进去。这里只在测试进程里屏蔽，不影响生产行为。"""
+
+
+patch("app.modules.system.auth.service._write_login_log", new=_skip_login_log).start()
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line("markers", "real_login_log: 测试真实的 _write_login_log，不使用全局屏蔽")
+
+
+@pytest.fixture(autouse=True)
+def _restore_real_login_log(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    if request.node.get_closest_marker("real_login_log"):
+        monkeypatch.setattr(_auth_service, "_write_login_log", _real_write_login_log)
+
+
 _app = create_app()
 _app.router.lifespan_context = _test_lifespan
 
